@@ -1,0 +1,160 @@
+{% load widget_tweaks %}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Music Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white h-screen flex flex-col">
+
+    <!-- Main layout -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar -->
+        <div class="w-64 bg-gray-800 p-4">
+            <h1 class="text-2xl font-bold mb-6">My Music</h1>
+            <nav class="space-y-2">
+                <a href="#" class="block hover:text-green-400">Favorites</a>
+                <a href="#" class="block hover:text-green-400">Recently Played</a>
+                <a href="#" class="block hover:text-green-400">Upload</a>
+            </nav>
+        </div>
+
+        <!-- Main content -->
+        <div class="flex-1 p-6 overflow-y-auto">
+
+            <!-- Upload Form -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-2">Upload a Song</h2>
+                <form method="post" enctype="multipart/form-data" class="bg-gray-800 p-4 rounded-lg">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        {{ form.title.label_tag }} {{ form.title|add_class:"text-black" }}
+                    </div>
+                    <div class="mb-4">
+                        {{ form.artist.label_tag }} {{ form.artist|add_class:"text-black" }}
+                    </div>
+                    <div class="mb-4">
+                        {{ form.cover.label_tag }} {{ form.cover }}
+                    </div>
+                    <div class="mb-4">
+                        {{ form.audio_file.label_tag }} {{ form.audio_file }}
+                    </div>
+                    <button type="submit" class="bg-green-500 hover:bg-green-600 text-white py-1 px-4 rounded">
+                        Upload
+                    </button>
+                </form>
+            </div>
+
+            <!-- Search Bar -->
+            <form method="get" class="mb-6">
+                <input type="text" name="q" placeholder="Search songs..." value="{{ query|default:'' }}"
+                       class="px-4 py-2 rounded bg-gray-700 border border-gray-600 w-full text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+            </form>
+
+            <!-- Song List -->
+            <h2 class="text-xl font-semibold mb-4">Playlist</h2>
+            <div class="space-y-4">
+                {% for song in songs %}
+                    <div class="bg-gray-800 p-4 rounded flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            {% if song.cover %}
+                                <img src="{{ song.cover.url }}" alt="Cover" class="w-16 h-16 object-cover rounded shadow">
+                            {% endif %}
+                            <div>
+                                <div class="text-lg font-medium">{{ song.title }}</div>
+                                <div class="text-sm text-gray-400">{{ song.artist }}</div>
+                            </div>
+                        </div>
+                        <button onclick="playSong('{{ song.audio_file.url }}', '{{ song.title|escapejs }}', '{{ song.artist|escapejs }}', )" 
+                                class="bg-green-500 text-sm px-3 py-1 rounded hover:bg-green-600">
+                            ▶ Play
+                        </button>
+                    </div>
+                {% empty %}
+                    <p class="text-gray-400">No songs uploaded yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Player -->
+    <footer class="bg-gray-800 p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <img id="player-cover" src="" alt="Cover" class="w-12 h-12 object-cover rounded" />
+            <div>
+                <div id="player-title" class="font-semibold">Choose a song above</div>
+                <div id="player-artist" class="text-sm text-gray-400"></div>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <!-- Optional: custom buttons -->
+            <audio id="main-player" controls class="w-96">
+                Your browser does not support the audio element.
+            </audio>
+        </div>
+    </footer>
+    
+
+    <!-- Player Script -->
+    <script>
+        const player = document.getElementById('main-player');
+        const playBtn = document.getElementById('play-btn');
+        const seekbar = document.getElementById('seekbar');
+        const currentTime = document.getElementById('current-time');
+        const duration = document.getElementById('duration');
+        const volumeSlider = document.getElementById('volume');
+
+        function playSong(url, title, artist, coverUrl) {
+        const player = document.getElementById('main-player');
+        const playerTitle = document.getElementById('player-title');
+        const playerArtist = document.getElementById('player-artist');
+        const playerCover = document.getElementById('player-cover');
+
+        player.src = url;
+        player.play();
+
+        playerTitle.textContent = title;
+        playerArtist.textContent = artist;
+        playerCover.src = coverUrl;
+    }
+
+        function togglePlay() {
+            if (player.paused) {
+                player.play();
+                playBtn.innerText = '⏸️';
+            } else {
+                player.pause();
+                playBtn.innerText = '▶️';
+            }
+        }
+
+        player.addEventListener('timeupdate', () => {
+            seekbar.value = player.currentTime;
+            currentTime.innerText = formatTime(player.currentTime);
+        });
+
+        player.addEventListener('loadedmetadata', () => {
+            seekbar.max = player.duration;
+            duration.innerText = formatTime(player.duration);
+        });
+
+        seekbar.addEventListener('input', () => {
+            player.currentTime = seekbar.value;
+        });
+
+        volumeSlider.addEventListener('input', () => {
+            player.volume = volumeSlider.value;
+        });
+
+        function formatTime(seconds) {
+            const min = Math.floor(seconds / 60);
+            const sec = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${min}:${sec}`;
+        }
+    </script>
+
+</body>
+</html>
